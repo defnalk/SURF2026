@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.defne.surf.backup</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/defneertugrul/Desktop/defnalk/SURF2026/data_management/rclone_backup.sh</string>
+    </array>
+
+    <!-- Run every day at 02:30 local time -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/defneertugrul/Library/Logs/surf2026_rclone.out</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/defneertugrul/Library/Logs/surf2026_rclone.err</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+</dict>
+</plist>

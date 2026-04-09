@@ -1,0 +1,69 @@
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.env
+.venv/
+env/
+venv/
+
+# ---------- Jupyter ----------
+*.nbconvert.ipynb
+
+# ---------- LAMMPS trajectories & large outputs ----------
+# Keep input decks (*.in, *.lmp) and small data files; ignore heavy outputs.
+*.dcd
+*.dump
+*.lammpstrj
+*.xtc
+*.trr
+*.nc
+*.h5
+*.restart
+*.restart.*
+log.lammps
+log.cite
+*.log
+
+# Large xyz trajectories (keep small reference xyz files by whitelist if needed)
+*.xyz
+!setup/**/reference_*.xyz
+
+# LAMMPS binary restart/checkpoint
+*.bin
+
+# ---------- VMD ----------
+*.vmdstate
+vmdscene.*
+*.tga
+*.rgb
+
+# ---------- OVITO ----------
+*.ovito
+*.ovito-session
+
+# ---------- Slurm / HPC ----------
+slurm-*.out
+*.err
+*.o[0-9]*
+*.e[0-9]*
+core.*
+
+# ---------- macOS / editors ----------
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# ---------- Analysis results (keep small summaries, ignore bulk) ----------
+analysis/results/*.npy
+analysis/results/*.npz
+analysis/results/*.h5
+analysis/results/raw/
+
+# ---------- Secrets ----------
+*.key
+*.pem
+rclone.conf
