@@ -130,17 +130,29 @@ def coordination_number(
     Returns (r_cut, n_coord).
     """
     if r_cut is None:
-        # Find first maximum, then the first minimum beyond it.
-        # Simple-minded: use diff-sign changes. Good enough for a skeleton.
+        # Find first maximum, then the first minimum beyond it via
+        # sign changes in the first difference. Operating on interior
+        # indices [1 .. len(g)-2] keeps the logic symmetric and avoids
+        # an off-by-one that could drop a valid minimum at the tail of
+        # the array.
         dg = np.diff(g)
-        maxima = np.where((dg[:-1] > 0) & (dg[1:] <= 0))[0] + 1
+        if dg.size < 2:
+            raise RuntimeError("g(r) too short to locate extrema.")
+        rising = dg[:-1] > 0
+        falling = dg[1:] <= 0
+        maxima = np.where(rising & falling)[0] + 1
         if maxima.size == 0:
             raise RuntimeError("No peak found in g(r); cannot auto-select r_cut.")
-        first_max = maxima[0]
-        minima = np.where((dg[first_max:-1] < 0) & (dg[first_max + 1:] >= 0))[0]
+        first_max = int(maxima[0])
+
+        # Candidate interior indices strictly after the first peak.
+        interior = np.arange(1, len(g) - 1)
+        after_peak = interior > first_max
+        is_min = (dg[:-1] < 0) & (dg[1:] >= 0)
+        minima = interior[after_peak & is_min]
         if minima.size == 0:
             raise RuntimeError("No minimum found after first peak of g(r).")
-        r_cut = r[first_max + minima[0] + 1]
+        r_cut = float(r[minima[0]])
 
     mask = r <= r_cut
     integrand = g[mask] * r[mask] ** 2
