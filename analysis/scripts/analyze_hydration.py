@@ -144,7 +144,10 @@ def coordination_number(
 
     mask = r <= r_cut
     integrand = g[mask] * r[mask] ** 2
-    n_coord = 4.0 * np.pi * rho_b * np.trapz(integrand, r[mask])
+    # np.trapz was deprecated in NumPy 2.0 in favour of np.trapezoid; fall
+    # back to np.trapz on older NumPy versions that lack trapezoid.
+    trapezoid = getattr(np, "trapezoid", np.trapz)
+    n_coord = 4.0 * np.pi * rho_b * trapezoid(integrand, r[mask])
     return float(r_cut), float(n_coord)
 
 
