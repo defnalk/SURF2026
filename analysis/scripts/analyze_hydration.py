@@ -151,11 +151,37 @@ def coordination_number(
     return float(r_cut), float(n_coord)
 
 
-def number_density(u: mda.Universe, species: str) -> float:
-    """Bulk number density of a species, averaged over the trajectory box."""
+def number_density(
+    u: mda.Universe,
+    species: str,
+    start: int | None = None,
+    stop: int | None = None,
+    step: int | None = None,
+) -> float:
+    """Bulk number density of a species, averaged over the trajectory box.
+
+    The frame window (``start``/``stop``/``step``) must match the window
+    used for the RDF; otherwise the coordination-number integral is
+    normalised by a density taken from a different set of frames, which
+    produces inconsistent results when the box volume drifts (NPT) or
+    when only part of the trajectory is analysed.
+    """
     ag = select(u, species)
-    volumes = np.array([ts.volume for ts in u.trajectory])
-    return ag.n_atoms / volumes.mean()
+    volumes = np.array(
+        [ts.volume for ts in u.trajectory[start:stop:step]]
+    )
+    if volumes.size == 0:
+        raise ValueError(
+            "Empty frame slice while computing number density; check "
+            "--start/--stop/--step."
+        )
+    mean_volume = volumes.mean()
+    if mean_volume <= 0.0:
+        raise ValueError(
+            f"Non-positive mean box volume ({mean_volume}); trajectory "
+            "likely has no box information."
+        )
+    return ag.n_atoms / mean_volume
 
 
 # ---------------------------------------------------------------------
@@ -192,7 +218,9 @@ def main() -> None:
         np.savetxt(out_csv, np.column_stack([r, g]), header="r[A] g(r)", comments="")
         logging.info("Wrote %s", out_csv)
 
-        rho_b = number_density(u, b)
+        rho_b = number_density(
+            u, b, start=args.start, stop=args.stop, step=args.step,
+        )
         try:
             r_cut, n_coord = coordination_number(r, g, rho_b)
         except RuntimeError as exc:
