@@ -215,7 +215,15 @@ def main() -> None:
             continue
 
         out_csv = args.outdir / f"rdf_{a}_{b}.csv"
-        np.savetxt(out_csv, np.column_stack([r, g]), header="r[A] g(r)", comments="")
+        # Write a real comma-separated file so pandas.read_csv / Excel /
+        # the sibling coordination_summary.csv all agree on the format.
+        np.savetxt(
+            out_csv,
+            np.column_stack([r, g]),
+            delimiter=",",
+            header="r_A,g_r",
+            comments="",
+        )
         logging.info("Wrote %s", out_csv)
 
         rho_b = number_density(
