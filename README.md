@@ -1,4 +1,4 @@
-# SURF 2026 — Enthalpic vs. Entropic Drivers of Ion Adsorption at Charged Surfaces
+# SURF 2026  Enthalpic vs. Entropic Drivers of Ion Adsorption at Charged Surfaces
 
 **Caltech Summer Undergraduate Research Fellowship (SURF) 2026**
 **Host Lab:** Fong Lab, Caltech
