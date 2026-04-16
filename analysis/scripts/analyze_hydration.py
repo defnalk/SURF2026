@@ -39,6 +39,10 @@ import numpy as np
 import MDAnalysis as mda
 from MDAnalysis.analysis import rdf as mda_rdf
 
+# np.trapz was deprecated in NumPy 2.0 in favour of np.trapezoid; fall
+# back to the old name for environments still on NumPy 1.x.
+_trapezoid = getattr(np, "trapezoid", np.trapz)
+
 
 # ---------------------------------------------------------------------
 # Configuration (edit atom-type names to match your Moltemplate output)
@@ -144,7 +148,7 @@ def coordination_number(
 
     mask = r <= r_cut
     integrand = g[mask] * r[mask] ** 2
-    n_coord = 4.0 * np.pi * rho_b * np.trapz(integrand, r[mask])
+    n_coord = 4.0 * np.pi * rho_b * _trapezoid(integrand, r[mask])
     return float(r_cut), float(n_coord)
 
 
