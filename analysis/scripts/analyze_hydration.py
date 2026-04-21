@@ -130,29 +130,70 @@ def coordination_number(
     Returns (r_cut, n_coord).
     """
     if r_cut is None:
-        # Find first maximum, then the first minimum beyond it.
-        # Simple-minded: use diff-sign changes. Good enough for a skeleton.
+        # Find first maximum, then the first minimum beyond it via
+        # sign changes in the first difference. Operating on interior
+        # indices [1 .. len(g)-2] keeps the logic symmetric and avoids
+        # an off-by-one that could drop a valid minimum at the tail of
+        # the array.
         dg = np.diff(g)
-        maxima = np.where((dg[:-1] > 0) & (dg[1:] <= 0))[0] + 1
+        if dg.size < 2:
+            raise RuntimeError("g(r) too short to locate extrema.")
+        rising = dg[:-1] > 0
+        falling = dg[1:] <= 0
+        maxima = np.where(rising & falling)[0] + 1
         if maxima.size == 0:
             raise RuntimeError("No peak found in g(r); cannot auto-select r_cut.")
-        first_max = maxima[0]
-        minima = np.where((dg[first_max:-1] < 0) & (dg[first_max + 1:] >= 0))[0]
+        first_max = int(maxima[0])
+
+        # Candidate interior indices strictly after the first peak.
+        interior = np.arange(1, len(g) - 1)
+        after_peak = interior > first_max
+        is_min = (dg[:-1] < 0) & (dg[1:] >= 0)
+        minima = interior[after_peak & is_min]
         if minima.size == 0:
             raise RuntimeError("No minimum found after first peak of g(r).")
-        r_cut = r[first_max + minima[0] + 1]
+        r_cut = float(r[minima[0]])
 
     mask = r <= r_cut
     integrand = g[mask] * r[mask] ** 2
-    n_coord = 4.0 * np.pi * rho_b * np.trapz(integrand, r[mask])
+    # np.trapz was deprecated in NumPy 2.0 in favour of np.trapezoid; fall
+    # back to np.trapz on older NumPy versions that lack trapezoid.
+    trapezoid = getattr(np, "trapezoid", np.trapz)
+    n_coord = 4.0 * np.pi * rho_b * trapezoid(integrand, r[mask])
     return float(r_cut), float(n_coord)
 
 
-def number_density(u: mda.Universe, species: str) -> float:
-    """Bulk number density of a species, averaged over the trajectory box."""
+def number_density(
+    u: mda.Universe,
+    species: str,
+    start: int | None = None,
+    stop: int | None = None,
+    step: int | None = None,
+) -> float:
+    """Bulk number density of a species, averaged over the trajectory box.
+
+    The frame window (``start``/``stop``/``step``) must match the window
+    used for the RDF; otherwise the coordination-number integral is
+    normalised by a density taken from a different set of frames, which
+    produces inconsistent results when the box volume drifts (NPT) or
+    when only part of the trajectory is analysed.
+    """
     ag = select(u, species)
-    volumes = np.array([ts.volume for ts in u.trajectory])
-    return ag.n_atoms / volumes.mean()
+    volumes = np.array(
+        [ts.volume for ts in u.trajectory[start:stop:step]]
+    )
+    if volumes.size == 0:
+        raise ValueError(
+            "Empty frame slice while computing number density; check "
+            "--start/--stop/--step."
+        )
+    mean_volume = volumes.mean()
+    if mean_volume <= 0.0:
+        raise ValueError(
+            f"Non-positive mean box volume ({mean_volume}); trajectory "
+            "likely has no box information."
+        )
+    return ag.n_atoms / mean_volume
 
 
 # ---------------------------------------------------------------------
@@ -186,10 +227,20 @@ def main() -> None:
             continue
 
         out_csv = args.outdir / f"rdf_{a}_{b}.csv"
-        np.savetxt(out_csv, np.column_stack([r, g]), header="r[A] g(r)", comments="")
+        # Write a real comma-separated file so pandas.read_csv / Excel /
+        # the sibling coordination_summary.csv all agree on the format.
+        np.savetxt(
+            out_csv,
+            np.column_stack([r, g]),
+            delimiter=",",
+            header="r_A,g_r",
+            comments="",
+        )
         logging.info("Wrote %s", out_csv)
 
-        rho_b = number_density(u, b)
+        rho_b = number_density(
+            u, b, start=args.start, stop=args.stop, step=args.step,
+        )
         try:
             r_cut, n_coord = coordination_number(r, g, rho_b)
         except RuntimeError as exc:
